@@ -1,0 +1,26 @@
+# Xcode / Swift
+DerivedData/
+build/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# CocoaPods (if ever used)
+Pods/
+*.xcworkspace
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Misc
+.DS_Store
