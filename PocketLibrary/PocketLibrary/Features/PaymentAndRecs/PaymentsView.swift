@@ -8,52 +8,68 @@
 import SwiftUI
 
 struct PaymentsView: View {
-    @StateObject private var vm = PaymentsViewModel()
+    @StateObject private var viewModel = PaymentsViewModel()
 
     var body: some View {
         VStack {
-            if vm.fines.isEmpty {
+            if viewModel.fines.isEmpty {
                 VStack(spacing: 12) {
-                    Text("No outstanding fines 🎉")
-                        .font(.headline)
-                    Text("Add a demo fine to test the Payments screen.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "checkmark.seal")
+                        .font(.system(size: 40))
+                    Text("No outstanding fines!")
+                        .font(.title3)
+                        .accessible()
                 }
                 .padding()
             } else {
-                List(vm.fines) { fine in
+                List(viewModel.fines) { fine in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(fine.bookTitle)
                                 .font(.headline)
-                            Text(fine.date.formatted())
+                                .accessible()
+
+                            Text(fine.date.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .accessible()
                         }
                         Spacer()
                         Text(fine.amount, format: .currency(code: "USD"))
-                            .font(.body.weight(.bold))
+                            .bold()
+                            .accessible()
                     }
                 }
+
+                HStack {
+                    Text("Total: ")
+                        .font(.headline)
+                    Text(viewModel.totalAmount, format: .currency(code: "USD"))
+                        .bold()
+                    Spacer()
+                    Button("Pay All (Sandbox)") {
+                        viewModel.payAll()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
             }
 
-            HStack {
-                Button("Add Demo Fine") {
-                    vm.addFine(title: "1984", amount: 3.50)
-                }
-
-                Spacer()
-
-                Button("Pay All (Sandbox)") {
-                    vm.payAll()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(vm.fines.isEmpty)
+            // Demo button for testing without backend
+            Button("Add Demo Fine") {
+                viewModel.addFine(title: "1984", amount: 3.50)
             }
-            .padding(.horizontal)
             .padding(.bottom)
         }
         .navigationTitle("Fines & Payments")
+        .background(Color.appBackground.ignoresSafeArea())
     }
 }
+
+#Preview {
+    NavigationStack {
+        PaymentsView()
+    }
+}
+
