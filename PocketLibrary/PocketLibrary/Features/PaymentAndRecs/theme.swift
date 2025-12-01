@@ -1,3 +1,10 @@
+//
+// theme.swift
+//  PocketLibrary
+//
+//  Created by Tatiana Klimova on 11/4/25.
+//
+// Modified by Yuchen Chung 11/30/25
 
 import SwiftUI
 
