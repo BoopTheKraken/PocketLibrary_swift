@@ -8,74 +8,93 @@
 import SwiftUI
 
 struct RecommendationsView: View {
-    /// Books the user has recently viewed / borrowed.
-    var recentlyViewed: [Book]
+    /// Inject these from Search/Availability when wiring up the app.
+    let recentlyViewed: [Book]
+    let allBooks: [Book]
 
-    /// All books available in the library (inject from Search/Availability later).
-    var allBooks: [Book]
-
-    /// Simple recommendation rule:
-    /// - collect genres of recently viewed books
-    /// - recommend other books with same genre that are not currently borrowed
     private var recommendations: [Book] {
         let genres = Set(recentlyViewed.map { $0.genre })
         guard !genres.isEmpty else { return [] }
 
-        return allBooks
-            .filter { genres.contains($0.genre) && $0.isBorrowed == false }
-            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        return allBooks.filter { book in
+            genres.contains(book.genre) && !book.isBorrowed
+        }
     }
 
     var body: some View {
         Group {
             if recommendations.isEmpty {
                 VStack(spacing: 12) {
-                    Text("No Recommendations Yet")
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 40))
+                    Text("No recommendations yet.")
                         .font(.title3)
-                        .bold()
-                    Text("Browse or borrow a few books and we’ll suggest similar titles here.")
-                        .font(.subheadline)
+                        .accessible()
+                    Text("Start browsing books and we’ll suggest similar titles here.")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .accessible()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
             } else {
                 List(recommendations) { book in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(book.title)
                             .font(.headline)
+                            .accessible()
+
                         Text(book.author)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .accessible()
+
                         Text(book.genre)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .accessible()
                     }
                     .padding(.vertical, 4)
                 }
-                .listStyle(.insetGrouped)
             }
         }
         .navigationTitle("Recommended")
+        .background(Color.appBackground.ignoresSafeArea())
     }
 }
 
 #Preview {
-    // Simple preview data so you can see the UI in Xcode
-    let sampleBooks = [
-        Book(id: UUID(), title: "Dune", author: "Frank Herbert", genre: "Sci-Fi", isbn: "1", isBorrowed: false),
-        Book(id: UUID(), title: "Neuromancer", author: "William Gibson", genre: "Sci-Fi", isbn: "2", isBorrowed: false),
-        Book(id: UUID(), title: "Pride and Prejudice", author: "Jane Austen", genre: "Romance", isbn: "3", isBorrowed: false),
-        Book(id: UUID(), title: "Foundation", author: "Isaac Asimov", genre: "Sci-Fi", isbn: "4", isBorrowed: true)
-    ]
+    // Sample data for preview only
+    let dune = Book(
+        id: UUID(),
+        title: "Dune",
+        author: "Frank Herbert",
+        genre: "Sci-Fi",
+        isbn: "123",
+        isBorrowed: true
+    )
+    let foundation = Book(
+        id: UUID(),
+        title: "Foundation",
+        author: "Isaac Asimov",
+        genre: "Sci-Fi",
+        isbn: "456",
+        isBorrowed: false
+    )
+    let pride = Book(
+        id: UUID(),
+        title: "Pride and Prejudice",
+        author: "Jane Austen",
+        genre: "Fiction",
+        isbn: "789",
+        isBorrowed: false
+    )
 
-    // Pretend user recently viewed Dune and Foundation (Sci-Fi)
-    NavigationStack {
+    return NavigationStack {
         RecommendationsView(
-            recentlyViewed: Array(sampleBooks.prefix(2)),
-            allBooks: sampleBooks
+            recentlyViewed: [dune],
+            allBooks: [dune, foundation, pride]
         )
     }
 }
-
