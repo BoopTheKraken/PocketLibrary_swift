@@ -32,8 +32,11 @@ final class PaymentsViewModel: ObservableObject {
     func payAll() {
         // In a later version, integrate Apple Pay here.
         // For now, we simply clear fines to simulate payment.
+        let amount = totalAmount
+        let formattedAmount = amount.formatted(.currency(code: "USD"))
         fines.removeAll()
         store.save(fines)
+        ToastManager.shared.success("Payment of \(formattedAmount) successful!")
     }
 
     var totalAmount: Double {

@@ -11,20 +11,20 @@ import SwiftData
 // MARK: - Root View
 /// Main TabView navigation for the app
 struct RootView: View {
-    @Environment(\.modelContext) private var modelContext
+    @StateObject private var reservationVM = ReservationViewModel()
     @AppStorage("selectedTab") private var selectedTab = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
             // Tab 1: Library (Home)
-            LibraryTab()
+            LibraryTab(reservationVM: reservationVM)
                 .tabItem {
                     Label("Library", systemImage: "building.columns.fill")
                 }
                 .tag(0)
             
             // Tab 2: Discover (Tatiana's features)
-            DiscoverTab()
+            DiscoverTab(reservationVM: reservationVM)
                 .tabItem {
                     Label("Discover", systemImage: "sparkles")
                 }
@@ -50,91 +50,103 @@ struct RootView: View {
 
 // MARK: - Tab 1: Library
 struct LibraryTab: View {
+    @ObservedObject var reservationVM: ReservationViewModel
+    @State private var scrollOffset: CGFloat = 0
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: Spacing.large) {
-                    // Quick Actions
-                    QuickActionsSection()
-                    
-                    // Main Features
-                    VStack(spacing: Spacing.standard) {
+                VStack(spacing: 0) {
+                    // Hero Section with Library Image
+                    LibraryHeroSection()
+
+                    VStack(spacing: Spacing.large) {
+                        // Quick Actions
+                        QuickActionsSection()
+
+                        // Main Features
+                        VStack(spacing: Spacing.standard) {
                         FeatureNavigationCard(
-                            title: "Search Books",
-                            subtitle: "Find available books nearby",
+                            title: "Search & Discover",
+                            subtitle: "Find books and check availability",
                             icon: "magnifyingglass",
-                            color: .blue,
-                            destination: PlaceholderScreen(title: "Search Books", description: "Search and filter the catalog. Coming soon.")
+                            color: .featureBlue,
+                            destination: SearchView(reservationVM: reservationVM)
                         )
-                        
-                        FeatureNavigationCard(
-                            title: "My Reservations",
-                            subtitle: "View your reserved books",
-                            icon: "bookmark.fill",
-                            color: .purple,
-                            destination: PlaceholderScreen(title: "My Reservations", description: "Manage current and past reservations. Coming soon.")
-                        )
-                        
-                        FeatureNavigationCard(
-                            title: "Reading Goals",
-                            subtitle: "Track your progress",
-                            icon: "target",
-                            color: .green,
-                            destination: PlaceholderScreen(title: "Reading Goals", description: "Set goals and track streaks. Coming soon.")
-                        )
+
+                            FeatureNavigationCard(
+                                title: "My Reservations",
+                                subtitle: "View your reserved books",
+                                icon: "bookmark.fill",
+                                color: .featurePurple,
+                                destination: ReservationView(reservationVM: reservationVM)
+                            )
+
+                            FeatureNavigationCard(
+                                title: "Reading Goals",
+                                subtitle: "Track your progress",
+                                icon: "target",
+                                color: .featureGreen,
+                                destination: ReadingGoalsView()
+                            )
+                        }
+                        .padding(.horizontal, Spacing.standard)
                     }
-                    .padding(.horizontal, Spacing.standard)
+                    .padding(.vertical, Spacing.standard)
                 }
-                .padding(.vertical, Spacing.standard)
             }
-            .background(Color.bg)
-            .navigationTitle("Library")
-            .navigationBarTitleDisplayMode(.large)
+            .background(Color.bg.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    // Empty - title hidden when at top
+                    Text("")
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 }
 
 // MARK: - Tab 2: Discover
 struct DiscoverTab: View {
+    @ObservedObject var reservationVM: ReservationViewModel
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.standard) {
                     FeatureNavigationCard(
-                        title: "Browse by Genre",
-                        subtitle: "Explore our collection",
-                        icon: "books.vertical.fill",
-                        color: .orange,
-                        destination: PlaceholderScreen(title: "Browse by Genre", description: "Browse genres and curated shelves. Coming soon.")
-                    )
-                    
-                    FeatureNavigationCard(
                         title: "Recommended for You",
                         subtitle: "Personalized suggestions",
                         icon: "sparkles",
-                        color: .pink,
-                        destination: PlaceholderScreen(title: "Recommendations", description: "Smart picks based on your history. Coming soon.")
+                        color: .featurePink,
+                        destination: RecommendationsView(
+                            recentlyViewed: Array(MockLibraryAPI.sampleBooks.prefix(2)),
+                            allBooks: MockLibraryAPI.sampleBooks,
+                            reservationVM: reservationVM
+                        )
                     )
-                    
+
                     FeatureNavigationCard(
                         title: "Library Card",
                         subtitle: "Your digital ID card",
                         icon: "qrcode",
-                        color: .teal,
-                        destination: PlaceholderScreen(title: "Library Card", description: "Your digital QR code card. Coming soon.")
+                        color: .featureTeal,
+                        destination: QRCardView()
                     )
-                    
+
                     FeatureNavigationCard(
                         title: "Find Branches",
                         subtitle: "Locate nearby libraries",
                         icon: "map.fill",
-                        color: .cyan,
-                        destination: PlaceholderScreen(title: "Find Branches", description: "Map and branch details. Coming soon.")
+                        color: .featureCyan,
+                        destination: BranchMapView()
                     )
                 }
                 .padding(Spacing.standard)
             }
-            .background(Color.bg)
+            .background(Color.bg.ignoresSafeArea())
             .navigationTitle("Discover")
             .navigationBarTitleDisplayMode(.large)
         }
@@ -143,6 +155,14 @@ struct DiscoverTab: View {
 
 // MARK: - Tab 3: Activity
 struct ActivityTab: View {
+    private let sampleBook = MockLibraryAPI.sampleBooks.first ?? Book(
+        title: "Dune",
+        author: "Frank Herbert",
+        genre: "Sci-Fi",
+        isbn: "9780441172719",
+        isBorrowed: false
+    )
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -151,29 +171,29 @@ struct ActivityTab: View {
                         title: "Book Reviews",
                         subtitle: "Share your thoughts",
                         icon: "text.bubble.fill",
-                        color: .indigo,
-                        destination: PlaceholderScreen(title: "Book Reviews", description: "Write and read reviews. Coming soon.")
+                        color: .featureIndigo,
+                        destination: ReviewsView(book: sampleBook)
                     )
-                    
+
                     FeatureNavigationCard(
-                        title: "Achievements",
-                        subtitle: "Your reading milestones",
-                        icon: "trophy.fill",
-                        color: Color(red: 1.0, green: 0.84, blue: 0.0),
-                        destination: PlaceholderScreen(title: "Achievements", description: "Earn badges and track milestones. Coming soon.")
+                        title: "Reading Stats",
+                        subtitle: "Progress and achievements",
+                        icon: "chart.bar.fill",
+                        color: .featureGold,
+                        destination: ReadingStatsView()
                     )
-                    
+
                     FeatureNavigationCard(
                         title: "Notifications",
                         subtitle: "Due date reminders",
                         icon: "bell.fill",
-                        color: .red,
-                        destination: PlaceholderScreen(title: "Notifications", description: "Manage alerts and reminders. Coming soon.")
+                        color: .featureRed,
+                        destination: NotificationsView()
                     )
                 }
                 .padding(Spacing.standard)
             }
-            .background(Color.bg)
+            .background(Color.bg.ignoresSafeArea())
             .navigationTitle("Activity")
             .navigationBarTitleDisplayMode(.large)
         }
@@ -195,8 +215,8 @@ struct AccountTab: View {
                             title: "Fines & Payments",
                             subtitle: "Manage your account",
                             icon: "creditcard.fill",
-                            color: .green,
-                            destination: PlaceholderScreen(title: "Fines & Payments", description: "Pay fines and view history. Coming soon.")
+                            color: .featureGreen,
+                            destination: PaymentsView()
                         )
                     }
                     .padding(.horizontal, Spacing.standard)
@@ -206,7 +226,7 @@ struct AccountTab: View {
                 }
                 .padding(.vertical, Spacing.standard)
             }
-            .background(Color.bg)
+            .background(Color.bg.ignoresSafeArea())
             .navigationTitle("Account")
             .navigationBarTitleDisplayMode(.large)
         }
@@ -246,6 +266,67 @@ struct PlaceholderScreen: View {
 
 // MARK: - Reusable Components
 
+// MARK: Library Hero Section with Parallax
+struct LibraryHeroSection: View {
+    @AppStorage("userName") private var userName = "Library Member"
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Layer 1: Background Image
+            GeometryReader { geometry in
+                let offset = geometry.frame(in: .global).minY
+
+                Image("library_hero")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: 240 + max(0, offset))
+                    .offset(y: -max(0, offset))
+                    .clipped()
+                    .accessibilityHidden(true)
+            }
+
+            // Layer 2: Gradient overlay at the bottom for text readability
+            VStack {
+                Spacer()
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: Color.black.opacity(0.85), location: 0.0),
+                        .init(color: Color.black.opacity(0.65), location: 0.3),
+                        .init(color: Color.black.opacity(0.3), location: 0.6),
+                        .init(color: Color.clear, location: 0.9)
+                    ]),
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+                .frame(height: 110)
+            }
+            .allowsHitTesting(false)
+
+            // Layer 3: Hero Content with fade effect
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                Text("Welcome back,")
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
+
+                Text(userName)
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 2)
+
+                Text("Discover your next great read")
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
+            }
+            .padding(Spacing.large)
+            .padding(.bottom, Spacing.small)
+        }
+        .frame(height: 240)
+        .clipped()
+    }
+}
+
 // MARK: Quick Actions
 struct QuickActionsSection: View {
     @AppStorage("selectedTab") private var selectedTab = 0
@@ -260,15 +341,15 @@ struct QuickActionsSection: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.standard) {
-                    QuickActionButton(icon: "qrcode", title: "Scan Card", color: .teal) {
+                    QuickActionButton(icon: "qrcode", title: "Scan Card", color: .featureTeal) {
                         selectedTab = 1
                     }
-                    
-                    QuickActionButton(icon: "map.fill", title: "Find Branch", color: .cyan) {
+
+                    QuickActionButton(icon: "map.fill", title: "Find Branch", color: .featureCyan) {
                         selectedTab = 1
                     }
-                    
-                    QuickActionButton(icon: "creditcard.fill", title: "Pay Fines", color: .green) {
+
+                    QuickActionButton(icon: "creditcard.fill", title: "Pay Fines", color: .featureGreen) {
                         selectedTab = 3
                     }
                 }
@@ -283,29 +364,43 @@ struct QuickActionButton: View {
     let title: String
     let color: Color
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: Spacing.small) {
                 ZStack {
                     Circle()
-                        .fill(color.opacity(0.2))
-                    
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    color.opacity(0.2),
+                                    color.opacity(0.3)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: color.opacity(0.2), radius: 4, x: 0, y: 2)
+
                     Image(systemName: icon)
                         .font(.title2)
                         .foregroundStyle(color)
+                        .accessibilityHidden(true)
                 }
                 .frame(width: 56, height: 56)
-                
+
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(Color.fg)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .frame(width: 80)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 80, alignment: .center)
             }
+            .frame(width: 80, alignment: .center)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 }
 
@@ -316,43 +411,54 @@ struct FeatureNavigationCard<Destination: View>: View {
     let icon: String
     let color: Color
     let destination: Destination
-    
+
     var body: some View {
         NavigationLink(destination: destination) {
             HStack(spacing: Spacing.standard) {
-                // Icon
+                // Icon with modern gradient
                 ZStack {
                     Circle()
-                        .fill(color.opacity(0.2))
-                    
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    color.opacity(0.15),
+                                    color.opacity(0.25)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
                     Image(systemName: icon)
                         .font(.title2)
                         .foregroundStyle(color)
+                        .accessibilityHidden(true)
                 }
                 .frame(width: 50, height: 50)
-                
+
                 // Text
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.body)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.fg)
-                    
+
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(Color.secondaryFg)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(Color.secondaryFg)
+                    .accessibilityHidden(true)
             }
             .padding(Spacing.standard)
             .background(Color.secondaryBg)
             .cornerRadius(CornerRadius.medium)
-            .shadow(color: Color.cardShadow, radius: 2, x: 0, y: 1)
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -362,49 +468,63 @@ struct FeatureNavigationCard<Destination: View>: View {
 struct ProfileCard: View {
     @AppStorage("userName") private var userName = "Library Member"
     @AppStorage("userLibraryID") private var userLibraryID = "LBR-1234-5678"
-    
+
     var body: some View {
         HStack(spacing: Spacing.standard) {
-            // Avatar
+            // Avatar with modern gradient
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.brandPrimary.opacity(0.6), Color.brandPrimary],
+                            gradient: Gradient(colors: [
+                                Color.brandPrimary.opacity(0.7),
+                                Color.brandPrimary,
+                                Color.featurePurple
+                            ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                
+                    .shadow(color: Color.brandPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
+
                 Image(systemName: "person.fill")
                     .font(.title)
                     .foregroundStyle(.white)
             }
             .frame(width: 60, height: 60)
-            
+
             // Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(userName)
                     .font(.body)
                     .fontWeight(.bold)
                     .foregroundStyle(Color.fg)
-                
+
                 Text("ID: \(userLibraryID)")
                     .font(.caption)
                     .foregroundStyle(Color.secondaryFg)
                     .monospaced()
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(Color.secondaryFg)
         }
         .padding(Spacing.standard)
-        .background(Color.secondaryBg)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.secondaryBg,
+                    Color.secondaryBg.opacity(0.95)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .cornerRadius(CornerRadius.medium)
-        .shadow(color: Color.cardShadow, radius: 2, x: 0, y: 1)
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
         .padding(.horizontal, Spacing.standard)
     }
 }
@@ -420,15 +540,15 @@ struct SettingsSection: View {
                 .padding(.horizontal, Spacing.standard)
             
             VStack(spacing: 0) {
-                SettingsRow(icon: "moon.fill", title: "Dark Mode", subtitle: "Automatic (System)", color: .purple)
+                SettingsRow(icon: "moon.fill", title: "Dark Mode", subtitle: "Automatic (System)", color: .featurePurple)
                 
                 Divider().padding(.leading, 60)
-                
-                SettingsRow(icon: "bell.fill", title: "Notifications", subtitle: "Enabled", color: .red)
-                
+
+                SettingsRow(icon: "bell.fill", title: "Notifications", subtitle: "Enabled", color: .featureRed)
+
                 Divider().padding(.leading, 60)
-                
-                SettingsRow(icon: "accessibility", title: "Accessibility", subtitle: "Text size: Medium", color: .blue)
+
+                SettingsRow(icon: "accessibility", title: "Accessibility", subtitle: "Text size: Medium", color: .featureBlue)
             }
             .background(Color.secondaryBg)
             .cornerRadius(CornerRadius.medium)

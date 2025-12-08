@@ -24,7 +24,6 @@ enum CornerRadius {
 }
 
 // Color palette used across the app.
-// Replace these fallbacks with Asset Catalog colors when available.
 extension Color {
     static let brandPrimary   = Color.blue
     static let accent         = Color.brandPrimary
@@ -33,6 +32,23 @@ extension Color {
     static let fg             = Color.primary
     static let secondaryFg    = Color.secondary
     static let cardShadow     = Color.black.opacity(0.08)
+
+    // Semantic feature colors (use these instead of hardcoded colors)
+    static let featureBlue    = Color.blue
+    static let featureIndigo  = Color.indigo
+    static let featurePurple  = Color.purple
+    static let featureGreen   = Color.green
+    static let featureOrange  = Color.orange
+    static let featurePink    = Color.pink
+    static let featureTeal    = Color.teal
+    static let featureCyan    = Color.cyan
+    static let featureRed     = Color.red
+    static let featureGold    = Color(red: 1.0, green: 0.84, blue: 0.0)
+
+    // Asset Catalog colors (for apps with custom design)
+    static let appBackground  = Color("BackgroundColor")
+    static let appText        = Color("TextColor")
+    static let appAccent      = Color("AccentColor")
 }
 
 // MARK: - Haptics
@@ -302,6 +318,35 @@ struct AppEntryView: View {
         } else {
             OnboardingView()
         }
+    }
+}
+
+// MARK: - Accessible Text Modifier
+
+struct AccessibleText: ViewModifier {
+    @Environment(\.sizeCategory) private var sizeCategory
+
+    func body(content: Content) -> some View {
+        content
+            .minimumScaleFactor(0.9)
+            .accessibilityAddTraits(.isStaticText)
+    }
+}
+
+extension View {
+    func accessible() -> some View {
+        modifier(AccessibleText())
+    }
+}
+
+// MARK: - Theming Helpers
+
+enum AppTheme {
+    static func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.headline)
+            .foregroundColor(.fg)
+            .accessible()
     }
 }
 

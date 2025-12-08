@@ -12,6 +12,9 @@ struct RecommendationsView: View {
     /// Inject these from Search/Availability when wiring up the app.
     let recentlyViewed: [Book]
     let allBooks: [Book]
+    @ObservedObject var reservationVM: ReservationViewModel = ReservationViewModel()
+    @StateObject private var availabilityVM = AvailabilityViewModel()
+    @State private var showBranchesForBook: Book?
 
     private var recommendations: [Book] {
         let genres = Set(recentlyViewed.map { $0.genre })
@@ -31,17 +34,18 @@ struct RecommendationsView: View {
                     Text("No recommendations yet.")
                         .font(.title3)
                         .accessible()
-                    Text("Start browsing books and we’ll suggest similar titles here.")
+                    Text("Start browsing books and we'll suggest similar titles here.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                         .accessible()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding()
             } else {
                 List(recommendations) { book in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(book.title)
                             .font(.headline)
                             .accessible()
@@ -55,13 +59,30 @@ struct RecommendationsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .accessible()
+
+                        Button {
+                            showBranchesFor(book)
+                        } label: {
+                            Label("Find nearby", systemImage: "location.viewfinder")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
                     }
                     .padding(.vertical, 4)
                 }
             }
         }
         .navigationTitle("Recommended")
-        .background(Color.appBackground.ignoresSafeArea())
+        .background(Color.bg.ignoresSafeArea())
+        .sheet(item: $showBranchesForBook) { book in
+            BranchesSheet(book: book, availabilityVM: availabilityVM, reservationVM: reservationVM)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func showBranchesFor(_ book: Book) {
+        showBranchesForBook = book
+        Task { await availabilityVM.loadBranches(for: book) }
     }
 }
 
@@ -95,7 +116,8 @@ struct RecommendationsView: View {
     return NavigationStack {
         RecommendationsView(
             recentlyViewed: [dune],
-            allBooks: [dune, foundation, pride]
+            allBooks: [dune, foundation, pride],
+            reservationVM: ReservationViewModel()
         )
     }
 }

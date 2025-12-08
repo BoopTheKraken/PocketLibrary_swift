@@ -10,6 +10,7 @@ import SwiftUI
 
 struct PaymentsView: View {
     @StateObject private var viewModel = PaymentsViewModel()
+    @State private var showingPaymentConfirmation = false
 
     var body: some View {
         VStack {
@@ -17,10 +18,13 @@ struct PaymentsView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "checkmark.seal")
                         .font(.system(size: 40))
+                        .foregroundStyle(Color.featureGreen)
+                        .accessibilityLabel("No fines")
                     Text("No outstanding fines!")
                         .font(.title3)
                         .accessible()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding()
             } else {
                 List(viewModel.fines) { fine in
@@ -49,11 +53,11 @@ struct PaymentsView: View {
                         .bold()
                     Spacer()
                     Button("Pay All (Sandbox)") {
-                        viewModel.payAll()
+                        showingPaymentConfirmation = true
                     }
                     .buttonStyle(.borderedProminent)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, Spacing.standard)
                 .padding(.bottom)
             }
 
@@ -61,10 +65,26 @@ struct PaymentsView: View {
             Button("Add Demo Fine") {
                 viewModel.addFine(title: "1984", amount: 3.50)
             }
+            .buttonStyle(.bordered)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.standard)
             .padding(.bottom)
         }
         .navigationTitle("Fines & Payments")
-        .background(Color.appBackground.ignoresSafeArea())
+        .background(Color.bg.ignoresSafeArea())
+        .confirmationDialog(
+            "Pay All Fines",
+            isPresented: $showingPaymentConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Pay \(viewModel.totalAmount, format: .currency(code: "USD"))") {
+                viewModel.payAll()
+                HapticFeedback.success.trigger()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to pay all outstanding fines? This action cannot be undone.")
+        }
     }
 }
 
@@ -73,4 +93,3 @@ struct PaymentsView: View {
         PaymentsView()
     }
 }
-

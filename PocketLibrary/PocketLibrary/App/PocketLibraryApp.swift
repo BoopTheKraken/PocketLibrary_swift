@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import UserNotifications
 
 // MARK: - Pocket Library App
 @main
@@ -21,38 +22,6 @@ struct PocketLibraryApp: App {
         // Configure app appearance
         configureAppearance()
     }
-
-// import UserNotifications
-
-// MARK: - Placeholder Due Date Notifier
-// This is a temporary stub. Replace with the real implementation later.
-enum DueDateNotifier {
-    // Requests notification permission from the user.
-    static func requestPermission() async -> Bool {
-        let center = UNUserNotificationCenter.current()
-        let settings = await center.notificationSettings()
-
-        switch settings.authorizationStatus {
-        case .notDetermined:
-            do {
-                let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
-                return granted
-            } catch {
-                print("Notification authorization request failed: \(error)")
-                return false
-            }
-        case .authorized, .provisional:
-            return true
-        default:
-            return false
-        }
-    }
-
-    // Placeholder for scheduling a notification for a due date.
-    static func scheduleDueDateNotification(for bookTitle: String, dueDate: Date) {
-        print("Stub: Would schedule notification for '\(bookTitle)' on \(dueDate)")
-    }
-}
     
     // MARK: - Body
     var body: some Scene {
@@ -61,6 +30,7 @@ enum DueDateNotifier {
                 .modelContainer(container)
                 .tint(Color.brandPrimary)
                 .preferredColorScheme(nil) // System dark mode
+                .toastView()
                 .task { await requestNotificationPermissions() }
                 .task { await seedDataIfNeeded() }
         }
